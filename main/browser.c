@@ -77,7 +77,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
 
 	// Create the WebKit web view
 	webview = webkit_web_view_new();
-	webkit_web_view_load_uri(WEBKIT_WEB_VIEW(webview), "https://start.duckduckgo.com/");
+	webkit_web_view_load_uri(WEBKIT_WEB_VIEW(webview), "StartPage/index.html");
 
 	// Create a scrollable container for the web view
 	scroll = gtk_scrolled_window_new(NULL, NULL);
