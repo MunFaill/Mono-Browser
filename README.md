@@ -8,7 +8,9 @@ You need a C/C++ compiler, in this case we are using GCC (GNU Compiler Collectio
 Use this shell code on terminal (Linux):
 
 ```shell
-cd Mono-Browser/main gcc browser.c -o browser `pkg-config --cflags --libs webkit2gtk-4.0 gtk+-3.0`
+cd Mono-Browser/main
+gcc browser.c -o browser `pkg-config --cflags --libs webkit2gtk-4.0 gtk+-3.0`
+./browser
 ```
 
 <img src="ScreenShots/browserimg.png">
