@@ -3,7 +3,7 @@ A very simple browser using WebKit with WebView and GTK programmed in c
 
 # Compile
 
-You need a C/C++ compiler, in this case we are using GCC (GNU Compiler Collection).
+You need a C/C++ compiler, in this case we are using GCC (GNU Compiler Collection), GTK and WebKit2GTK.
 
 Use this shell code on terminal (Linux):
 
