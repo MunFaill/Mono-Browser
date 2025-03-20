@@ -55,11 +55,6 @@ static void load_url(GtkEntry *entry, gpointer user_data) {
     }
 }
 
-/* Callback for the "Go" button */
-static void on_button_clicked(GtkButton *button, gpointer user_data) {
-    GtkEntry *entry = GTK_ENTRY(user_data);
-    load_url(entry, g_object_get_data(G_OBJECT(entry), "webview"));
-}
 
 /* Callback for the "Back" button */
 static void on_back_button_clicked(GtkButton *button, gpointer user_data) {
@@ -123,7 +118,7 @@ static void new_tab_cb(GtkButton *button, gpointer user_data) {
    Returns the container (vbox) that will be the tab page. */
 GtkWidget* create_browser_tab(GtkNotebook *notebook) {
     GtkWidget *vbox, *toolbar, *scroll;
-    GtkWidget *back_button, *entry, *go_button, *close_button, *plus_button;
+    GtkWidget *back_button, *entry, *close_button, *plus_button;
     GtkWidget *webview;
     WebKitSettings *settings;
 
@@ -143,9 +138,6 @@ GtkWidget* create_browser_tab(GtkNotebook *notebook) {
     gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Enter a URL or search...");
     gtk_box_pack_start(GTK_BOX(toolbar), entry, TRUE, TRUE, 0);
 
-    /* "Go" button */
-    go_button = gtk_button_new_with_label("🔍");
-    gtk_box_pack_start(GTK_BOX(toolbar), go_button, FALSE, FALSE, 0);
 
     /* Close button (X) – placed to the left of the "+" button */
     close_button = gtk_button_new_with_label("X");
@@ -172,7 +164,6 @@ GtkWidget* create_browser_tab(GtkNotebook *notebook) {
 
     /* Connects the signals */
     g_signal_connect(entry, "activate", G_CALLBACK(load_url), webview);
-    g_signal_connect(go_button, "clicked", G_CALLBACK(on_button_clicked), entry);
     g_signal_connect(back_button, "clicked", G_CALLBACK(on_back_button_clicked), webview);
     g_signal_connect(entry, "activate", G_CALLBACK(load_url), webview);
 
