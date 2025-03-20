@@ -11,7 +11,7 @@
 
 
 #include <gtk-3.0/gtk/gtk.h>
-#include <webkit2/webkit2.h>
+#include <webkitgtk-4.0/webkit2/webkit2.h>
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,13 +63,20 @@ static void on_back_button_clicked(GtkButton *button, gpointer user_data) {
         webkit_web_view_go_back(webview);
 }
 
+/* Callback for the "Forward" button */
+static void on_forward_button_clicked(GtkButton *button, gpointer user_data) {
+    WebKitWebView *webview = WEBKIT_WEB_VIEW(user_data);
+    if (webkit_web_view_can_go_forward(webview))
+        webkit_web_view_go_forward(webview);
+}
+
 /* Loads the start page in the WebView */
 static void create_first_tab(WebKitWebView *webview) {
     char *start_page = get_start_page_path();
     if (g_file_test(start_page + 7, G_FILE_TEST_EXISTS))  // skips "file://"
         webkit_web_view_load_uri(webview, start_page);
     else
-        webkit_web_view_load_uri(webview, "https://www.duckduckgo.com");
+        webkit_web_view_load_uri(webview, "https://start.duckduckgo.com");
     g_free(start_page);
 }
 
@@ -118,7 +125,7 @@ static void new_tab_cb(GtkButton *button, gpointer user_data) {
    Returns the container (vbox) that will be the tab page. */
 GtkWidget* create_browser_tab(GtkNotebook *notebook) {
     GtkWidget *vbox, *toolbar, *scroll;
-    GtkWidget *back_button, *entry, *close_button, *plus_button;
+    GtkWidget *back_button, *forward_button, *entry, *close_button, *plus_button;
     GtkWidget *webview;
     WebKitSettings *settings;
 
@@ -130,27 +137,37 @@ GtkWidget* create_browser_tab(GtkNotebook *notebook) {
     gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
 
     /* Back button */
-    back_button = gtk_button_new_with_label("←");
+    back_button = gtk_button_new_with_label("<");
     gtk_box_pack_start(GTK_BOX(toolbar), back_button, FALSE, FALSE, 0);
+
+    /* Forward button */
+    forward_button = gtk_button_new_with_label(">");
+    gtk_box_pack_start(GTK_BOX(toolbar), forward_button, FALSE, FALSE, 0);
 
     /* URL entry */
     entry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Enter a URL or search...");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Search...");
     gtk_box_pack_start(GTK_BOX(toolbar), entry, TRUE, TRUE, 0);
 
-
-    /* Close button (X) – placed to the left of the "+" button */
-    close_button = gtk_button_new_with_label("X");
+    /* Close button (X) */
+    close_button = gtk_button_new_with_label("x");
     gtk_box_pack_start(GTK_BOX(toolbar), close_button, FALSE, FALSE, 0);
 
     /* "+" button to create a new tab */
     plus_button = gtk_button_new_with_label("+");
     gtk_box_pack_start(GTK_BOX(toolbar), plus_button, FALSE, FALSE, 0);
 
-    /* Creates the WebView and enables hardware acceleration */
+    /* Creates the WebView with optimized settings */
     webview = webkit_web_view_new();
     settings = webkit_settings_new();
-	webkit_settings_set_enable_accelerated_2d_canvas(settings, TRUE);
+    webkit_settings_set_enable_2d_canvas_acceleration(settings, TRUE);
+    webkit_settings_set_enable_webgl(settings, TRUE);
+    webkit_settings_set_enable_javascript(settings, TRUE);
+    webkit_settings_set_enable_media_stream(settings, TRUE);
+    webkit_settings_set_enable_media_capabilities(settings, TRUE);
+    webkit_settings_set_enable_mediasource(settings, TRUE);
+    webkit_settings_set_enable_encrypted_media(settings, TRUE);
+    
     webkit_web_view_set_settings(WEBKIT_WEB_VIEW(webview), settings);
     g_object_unref(settings);
 
@@ -159,19 +176,16 @@ GtkWidget* create_browser_tab(GtkNotebook *notebook) {
     gtk_container_add(GTK_CONTAINER(scroll), webview);
     gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
 
-    /* Associates the webview with the tab container for easy access */
+    /* Associates the webview with the tab container */
     g_object_set_data(G_OBJECT(vbox), "webview", webview);
 
     /* Connects the signals */
     g_signal_connect(entry, "activate", G_CALLBACK(load_url), webview);
     g_signal_connect(back_button, "clicked", G_CALLBACK(on_back_button_clicked), webview);
-    g_signal_connect(entry, "activate", G_CALLBACK(load_url), webview);
-
-    /* Connects the "+" button to create a new tab (passes the notebook as user_data) */
+    g_signal_connect(forward_button, "clicked", G_CALLBACK(on_forward_button_clicked), webview);
     g_signal_connect(plus_button, "clicked", G_CALLBACK(new_tab_cb), notebook);
 
-    /* Connects the "X" button to close the current tab.
-       Prepares a TabData structure for the callback */
+    /* Connects the "X" button to close the current tab */
     {
         TabData *data = g_malloc(sizeof(TabData));
         data->notebook = notebook;
@@ -188,10 +202,25 @@ GtkWidget* create_browser_tab(GtkNotebook *notebook) {
 /* GTK initialization function */
 static void activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *window, *main_vbox, *notebook;
+    GtkCssProvider *provider;
 
-    /* Activates the dark theme */
-    GtkSettings *settings = gtk_settings_get_default();
-    g_object_set(settings, "gtk-application-prefer-dark-theme", TRUE, NULL);
+    /* Configura o tema escuro do GTK */
+    provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(provider,
+        "window { background-color: #1e1e1e; color: #ffffff; }"
+        "entry { background-color: #2d2d2d; color: #ffffff; border: 1px solid #3d3d3d; }"
+        "entry:focus { border: 1px solid #4d4d4d; }"
+        "button { background-color: #2d2d2d; color: #ffffff; border: 1px solid #3d3d3d; }"
+        "button:hover { background-color: #3d3d3d; }"
+        "notebook { background-color: #1e1e1e; }"
+        "notebook tab { background-color: #2d2d2d; color: #ffffff; border: 1px solid #3d3d3d; }"
+        "notebook tab:active { background-color: #3d3d3d; }"
+        "notebook tab:hover { background-color: #3d3d3d; }"
+        "scrolledwindow { background-color: #1e1e1e; }",
+        -1, NULL);
+    gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
     /* Creates the main window */
     window = gtk_application_window_new(app);
@@ -202,9 +231,11 @@ static void activate(GtkApplication *app, gpointer user_data) {
     main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_add(GTK_CONTAINER(window), main_vbox);
 
-    /* Creates the Notebook (tab manager) */
+    /* Creates the Notebook (tab manager) with scrollable tabs */
     notebook = gtk_notebook_new();
-    gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_TOP);
+    gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_BOTTOM);
+    gtk_notebook_set_scrollable(GTK_NOTEBOOK(notebook), TRUE);
+    gtk_notebook_set_show_border(GTK_NOTEBOOK(notebook), FALSE);
     gtk_widget_set_hexpand(notebook, TRUE);
     gtk_widget_set_vexpand(notebook, TRUE);
     gtk_box_pack_start(GTK_BOX(main_vbox), notebook, TRUE, TRUE, 0);
@@ -212,7 +243,6 @@ static void activate(GtkApplication *app, gpointer user_data) {
     /* Creates the first tab */
     {
         GtkWidget *page = create_browser_tab(GTK_NOTEBOOK(notebook));
-        /* Creates a simple label for the tab; it will be updated via the callback */
         GtkWidget *tab_label = gtk_label_new("New Tab");
         gint page_num = gtk_notebook_append_page(GTK_NOTEBOOK(notebook), page, tab_label);
         WebKitWebView *webview = WEBKIT_WEB_VIEW(g_object_get_data(G_OBJECT(page), "webview"));
@@ -227,11 +257,17 @@ int main(int argc, char **argv) {
     GtkApplication *app;
     int status;
 
+    /* Força o tema escuro do GTK */
+    g_setenv("GTK_THEME", "Adwaita:dark", TRUE);
+
     app = gtk_application_new("com.ignis.monobrowser", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
 
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
+
+    return status;
+}
 
     return status;
 }
