@@ -1,6 +1,6 @@
 # Mono-Browser
 
-#ARCHIVED REPO
+# ARCHIVED REPO
 
 A very simple browser using WebKit with WebView and GTK programmed in c
 
